@@ -11,13 +11,12 @@ RUN pnpm run build && \
     npx tsc server.ts --outDir dist-server --module ESNext --moduleResolution bundler --target ES2020 --esModuleInterop
 
 # Server stage
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server ./dist-server
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 
