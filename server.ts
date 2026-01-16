@@ -7,11 +7,10 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
 
-// Determine dist path (different in dev vs production/docker)
 const distPath =
   process.env.NODE_ENV === 'production'
-    ? path.join(__dirname, '../dist') // In Docker: dist-server/../dist = dist
-    : path.join(__dirname, 'dist'); // In dev: ./dist
+    ? path.join(__dirname, 'dist')
+    : path.join(__dirname, 'dist');
 
 const app = express();
 const httpServer = createServer(app);
