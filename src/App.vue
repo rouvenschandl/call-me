@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { io, Socket } from 'socket.io-client';
 
 const clientName = ref<'clientA' | 'clientB'>('clientA');
@@ -13,10 +13,9 @@ const ping = ref(0);
 const originalFaviconHref = ref<string | null>(null);
 const hadOriginalFavicon = ref(false);
 const originalTitle = ref('');
-const blinkInterval = ref<ReturnType<typeof setInterval> | null>(null);
-const cleanupInterval = ref<ReturnType<typeof setInterval> | null>(null);
 let socket: Socket;
-let pingInterval: ReturnType<typeof setInterval>;
+let blinkInterval: ReturnType<typeof setInterval> | null = null;
+let pingInterval: ReturnType<typeof setInterval> | null = null;
 
 const containerClass = computed(() => ({
   ringing: isRinging.value,
@@ -85,10 +84,9 @@ const connect = () => {
     registrationError.value = '';
     console.log('✓ Connected to server');
 
-    // Start ping measurements every 3 seconds
     if (pingInterval) clearInterval(pingInterval);
     pingInterval = setInterval(measurePing, 3000);
-    measurePing(); // Immediate first ping
+    measurePing();
 
     socket.emit('register', clientName.value);
   });
@@ -181,13 +179,13 @@ const restoreOriginalFavicon = () => {
   }
 };
 
-const createRedIcon = () => {
+const createIconWithColor = (color: string) => {
   const canvas = document.createElement('canvas');
   canvas.width = 32;
   canvas.height = 32;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    ctx.fillStyle = '#ff0000';
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(16, 16, 14, 0, Math.PI * 2);
     ctx.fill();
@@ -195,33 +193,9 @@ const createRedIcon = () => {
   return canvas.toDataURL();
 };
 
-const createBlackIcon = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(16, 16, 14, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  return canvas.toDataURL();
-};
-
-const createDefaultIcon = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#111';
-    ctx.beginPath();
-    ctx.arc(16, 16, 14, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  return canvas.toDataURL();
-};
+const createRedIcon = () => createIconWithColor('#ff0000');
+const createBlackIcon = () => createIconWithColor('#000');
+const createDefaultIcon = () => createIconWithColor('#111');
 
 const ensureBaseFavicon = () => {
   if (!originalFaviconHref.value) {
@@ -247,40 +221,23 @@ const ensureBaseFavicon = () => {
 };
 
 const stopRinging = () => {
-  if (blinkInterval.value) {
-    clearInterval(blinkInterval.value);
-    blinkInterval.value = null;
+  if (blinkInterval) {
+    clearInterval(blinkInterval);
+    blinkInterval = null;
   }
   isRinging.value = false;
   restoreOriginalFavicon();
-  if (!hadOriginalFavicon.value && !originalFaviconHref.value) {
-    // fallback to default icon
-    setFavicon('/favicon.ico');
-  }
   document.title = originalTitle.value || 'call-me';
 };
 
 const triggerRing = () => {
   stopRinging();
-
-  if (!originalFaviconHref.value) {
-    const currentLink = getFaviconLink();
-    if (currentLink?.href) {
-      originalFaviconHref.value = currentLink.href;
-      hadOriginalFavicon.value = true;
-    } else {
-      originalFaviconHref.value = '/favicon.ico';
-      hadOriginalFavicon.value = false;
-    }
-  }
-  if (!originalTitle.value) {
-    originalTitle.value = document.title || 'call-me';
-  }
+  ensureBaseFavicon();
 
   isRinging.value = true;
 
   let isBlinkingOn = true;
-  blinkInterval.value = setInterval(() => {
+  blinkInterval = setInterval(() => {
     if (isBlinkingOn) {
       setFavicon(createRedIcon());
       document.title = '📞 INCOMING CALL!';
@@ -304,39 +261,15 @@ const handleKeyPress = (event: KeyboardEvent) => {
   }
 };
 
-// Update favicon dynamically when ringing
-const updateFavicon = (ringing: boolean) => {
-  if (!ringing) {
-    stopRinging();
-  }
-};
-
-// Watch isRinging and update favicon
-watch(isRinging, (newVal) => {
-  updateFavicon(newVal);
-});
-
 onMounted(() => {
   ensureBaseFavicon();
-  // Load saved client choice
   loadClientChoice();
-  // Connect to server
   connect();
-
-  // Add keyboard listener
   window.addEventListener('keydown', handleKeyPress);
-
-  // Cleanup interval: Remove favicon every second if NOT ringing
-  cleanupInterval.value = setInterval(() => {
-    if (!isRinging.value) {
-      stopRinging();
-    }
-  }, 1000);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyPress);
-  if (cleanupInterval.value) clearInterval(cleanupInterval.value);
   if (pingInterval) clearInterval(pingInterval);
   stopRinging();
   if (socket) {
@@ -601,58 +534,12 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.setup {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2rem;
-}
-
-.client-select {
-  display: flex;
-  gap: 3rem;
-  justify-content: center;
-}
-
-.radio-label {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  cursor: pointer;
-  font-size: 1.1rem;
-  color: #fff;
-  transition: opacity 0.3s;
-}
-
-.radio-label:hover {
-  opacity: 0.8;
-}
-
-.radio-label input {
-  cursor: pointer;
-  width: 1.3rem;
-  height: 1.3rem;
-  accent-color: #fff;
-}
-
-.radio-label span {
-  font-weight: 500;
-}
-
 .app {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3rem;
   position: relative;
-}
-
-.client-info {
-  font-size: 0.9rem;
-  color: #666;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-weight: 600;
 }
 
 .call-button {
