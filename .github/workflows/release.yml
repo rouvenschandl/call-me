@@ -11,7 +11,29 @@ env:
   IMAGE_NAME: ghcr.io/rouvenschandl/call-me
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Lint and format check
+        run: bun check
+
+      - name: Type check
+        run: bun check:types
+
   docker-amd:
+    needs: [validate]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -48,6 +70,7 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.version }}-amd64
 
   docker-arm:
+    needs: [validate]
     runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
