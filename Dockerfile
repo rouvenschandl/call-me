@@ -7,8 +7,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 COPY . .
-RUN bun run build && \
-    bunx tsc server.ts --outDir dist-server --module ESNext --moduleResolution bundler --target ES2020 --esModuleInterop
+RUN bun run build && bun run build:server
 
 # Server stage
 FROM oven/bun:1.3.11-alpine

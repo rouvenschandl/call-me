@@ -84,7 +84,7 @@ docker run -p 3000:3000 call-me
 ## 🛠️ Tech Stack
 
 - **Frontend**: Vue 3, TypeScript, Vite
-- **Backend**: Node.js, Express, Socket.IO
+- **Backend**: Bun, Express, Socket.IO
 - **Deployment**: Docker, GitHub Actions, GHCR
 
 ## 📦 Deployment
