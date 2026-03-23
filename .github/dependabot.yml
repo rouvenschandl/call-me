@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Enable version updates for pnpm
+  # Enable version updates for Bun-managed npm dependencies
   - package-ecosystem: npm
     # Look for `package.json` and `lock` files in the root directory
     directory: /
@@ -12,7 +12,7 @@ updates:
     # Group updates into a single pull request
     groups:
       # The name of the group (identifier)
-      pnpm-deps:
+      bun-deps:
         update-types: [minor, patch]
     # Only allow minor and patch updates
     ignore:
@@ -26,6 +26,18 @@ updates:
     # Look for `.github/workflows` in the root directory
     directory: /
     # Check GitHub Actions for updates every week
+    schedule:
+      interval: weekly
+    # Limit the number of open pull requests for version updates to 1
+    open-pull-requests-limit: 1
+    # Target branch for pull requests
+    target-branch: develop
+
+  # Enable base image updates for Docker
+  - package-ecosystem: docker
+    # Look for Dockerfile in the root directory
+    directory: /
+    # Check Docker Hub/GHCR tags every week
     schedule:
       interval: weekly
     # Limit the number of open pull requests for version updates to 1

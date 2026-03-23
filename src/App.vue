@@ -1,41 +1,48 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { io, Socket } from 'socket.io-client';
+import { type Socket, io } from "socket.io-client";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import packageJson from "../package.json";
 
-const clientName = ref<'clientA' | 'clientB'>('clientA');
+const clientName = ref<"clientA" | "clientB">("clientA");
 const registered = ref(false);
 const isRinging = ref(false);
 const isCallTimeout = ref(false);
 const timeoutCounter = ref(5);
 const isConnected = ref(false);
-const registrationError = ref('');
+const registrationError = ref("");
 const ping = ref(0);
 const originalFaviconHref = ref<string | null>(null);
 const hadOriginalFavicon = ref(false);
-const originalTitle = ref('');
+const originalTitle = ref("");
 let socket: Socket;
 let blinkInterval: ReturnType<typeof setInterval> | null = null;
 let pingInterval: ReturnType<typeof setInterval> | null = null;
 
+type RegistrationResult = {
+  success: boolean;
+  message?: string;
+};
+
 const containerClass = computed(() => ({
   ringing: isRinging.value,
 }));
+const appVersion = packageJson.version;
 
 // Save client selection to localStorage
-const saveClientChoice = (name: 'clientA' | 'clientB') => {
-  localStorage.setItem('selectedClient', name);
+const saveClientChoice = (name: "clientA" | "clientB") => {
+  localStorage.setItem("selectedClient", name);
 };
 
 // Load client selection from localStorage
 const loadClientChoice = () => {
-  const saved = localStorage.getItem('selectedClient');
-  if (saved === 'clientA' || saved === 'clientB') {
+  const saved = localStorage.getItem("selectedClient");
+  if (saved === "clientA" || saved === "clientB") {
     clientName.value = saved;
   }
 };
 
 // Watch for client name changes and reconnect
-const changeClient = (newName: 'clientA' | 'clientB') => {
+const changeClient = (newName: "clientA" | "clientB") => {
   if (newName !== clientName.value && isConnected.value) {
     // Disconnect from old client
     socket.disconnect();
@@ -43,7 +50,7 @@ const changeClient = (newName: 'clientA' | 'clientB') => {
     // Update client name
     clientName.value = newName;
     saveClientChoice(newName);
-    registrationError.value = '';
+    registrationError.value = "";
 
     // Reconnect with new client
     setTimeout(() => {
@@ -59,7 +66,7 @@ const changeClient = (newName: 'clientA' | 'clientB') => {
 const measurePing = () => {
   if (socket && isConnected.value) {
     const start = Date.now();
-    socket.emit('ping', () => {
+    socket.emit("ping", () => {
       ping.value = Date.now() - start;
     });
   }
@@ -71,58 +78,58 @@ const connect = () => {
   const socketUrl =
     import.meta.env.DEV && import.meta.env.VITE_SERVER_URL
       ? import.meta.env.VITE_SERVER_URL
-      : window.location.origin.replace(/:\d+$/, ':3000'); // Use current host but port 3000
+      : window.location.origin.replace(/:\d+$/, ":3000"); // Use current host but port 3000
 
-  console.log('🔌 Connecting to:', socketUrl);
+  console.log("🔌 Connecting to:", socketUrl);
 
   socket = io(socketUrl, {
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
   });
 
-  socket.on('connect', () => {
+  socket.on("connect", () => {
     isConnected.value = true;
-    registrationError.value = '';
-    console.log('✓ Connected to server');
+    registrationError.value = "";
+    console.log("✓ Connected to server");
 
     if (pingInterval) clearInterval(pingInterval);
     pingInterval = setInterval(measurePing, 3000);
     measurePing();
 
-    socket.emit('register', clientName.value);
+    socket.emit("register", clientName.value);
   });
 
-  socket.on('registered', (data: any) => {
+  socket.on("registered", (data: RegistrationResult) => {
     if (data.success) {
       registered.value = true;
-      registrationError.value = '';
+      registrationError.value = "";
       console.log(`✓ Registered as ${clientName.value}`);
     } else {
       registered.value = false;
-      registrationError.value = data.message || 'Registration failed';
-      console.error('✗ Registration failed:', data.message);
+      registrationError.value = data.message || "Registration failed";
+      console.error("✗ Registration failed:", data.message);
       // Try to reconnect if registration failed
       setTimeout(() => {
-        socket.emit('register', clientName.value);
+        socket.emit("register", clientName.value);
       }, 1000);
     }
   });
 
-  socket.on('bell-rung', () => {
+  socket.on("bell-rung", () => {
     triggerRing();
   });
 
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     isConnected.value = false;
     registered.value = false;
-    registrationError.value = '';
+    registrationError.value = "";
     if (pingInterval) clearInterval(pingInterval);
-    console.log('✗ Disconnected from server');
+    console.log("✗ Disconnected from server");
   });
 };
 
 const ringBell = () => {
   if (socket && registered.value && !isCallTimeout.value) {
-    socket.emit('ring');
+    socket.emit("ring");
 
     // Disable button for 5 seconds with countdown
     isCallTimeout.value = true;
@@ -144,21 +151,21 @@ const getFaviconLink = () =>
 
 const setFavicon = (href: string) => {
   let link = document.getElementById(
-    'dynamic-favicon'
+    "dynamic-favicon",
   ) as HTMLLinkElement | null;
   if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    link.type = 'image/png';
-    link.sizes = '32x32';
-    link.id = 'dynamic-favicon';
+    link = document.createElement("link");
+    link.rel = "icon";
+    link.type = "image/png";
+    link.sizes = "32x32";
+    link.id = "dynamic-favicon";
     document.head.appendChild(link);
   }
   link.href = href;
 };
 
 const removeDynamicFavicon = () => {
-  const link = document.getElementById('dynamic-favicon');
+  const link = document.getElementById("dynamic-favicon");
   if (link) {
     link.remove();
   }
@@ -171,8 +178,8 @@ const restoreOriginalFavicon = () => {
     if (link) {
       link.href = originalFaviconHref.value;
     } else {
-      const newLink = document.createElement('link');
-      newLink.rel = 'icon';
+      const newLink = document.createElement("link");
+      newLink.rel = "icon";
       newLink.href = originalFaviconHref.value;
       document.head.appendChild(newLink);
     }
@@ -180,10 +187,10 @@ const restoreOriginalFavicon = () => {
 };
 
 const createIconWithColor = (color: string) => {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = 32;
   canvas.height = 32;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (ctx) {
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -193,9 +200,9 @@ const createIconWithColor = (color: string) => {
   return canvas.toDataURL();
 };
 
-const createRedIcon = () => createIconWithColor('#ff0000');
-const createBlackIcon = () => createIconWithColor('#000');
-const createDefaultIcon = () => createIconWithColor('#111');
+const createRedIcon = () => createIconWithColor("#ff0000");
+const createBlackIcon = () => createIconWithColor("#000");
+const createDefaultIcon = () => createIconWithColor("#111");
 
 const ensureBaseFavicon = () => {
   if (!originalFaviconHref.value) {
@@ -205,10 +212,10 @@ const ensureBaseFavicon = () => {
       hadOriginalFavicon.value = true;
     } else {
       const icon = createDefaultIcon();
-      const link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/png';
-      link.sizes = '32x32';
+      const link = document.createElement("link");
+      link.rel = "icon";
+      link.type = "image/png";
+      link.sizes = "32x32";
       link.href = icon;
       document.head.appendChild(link);
       originalFaviconHref.value = link.href;
@@ -216,7 +223,7 @@ const ensureBaseFavicon = () => {
     }
   }
   if (!originalTitle.value) {
-    originalTitle.value = document.title || 'call-me';
+    originalTitle.value = document.title || "call-me";
   }
 };
 
@@ -227,7 +234,7 @@ const stopRinging = () => {
   }
   isRinging.value = false;
   restoreOriginalFavicon();
-  document.title = originalTitle.value || 'call-me';
+  document.title = originalTitle.value || "call-me";
 };
 
 const triggerRing = () => {
@@ -240,10 +247,10 @@ const triggerRing = () => {
   blinkInterval = setInterval(() => {
     if (isBlinkingOn) {
       setFavicon(createRedIcon());
-      document.title = '📞 INCOMING CALL!';
+      document.title = "📞 INCOMING CALL!";
     } else {
       setFavicon(createBlackIcon());
-      document.title = originalTitle.value || 'call-me';
+      document.title = originalTitle.value || "call-me";
     }
     isBlinkingOn = !isBlinkingOn;
   }, 250);
@@ -255,7 +262,7 @@ const triggerRing = () => {
 
 // Handle keyboard shortcuts
 const handleKeyPress = (event: KeyboardEvent) => {
-  if (event.code === 'Space' && !event.repeat) {
+  if (event.code === "Space" && !event.repeat) {
     event.preventDefault();
     ringBell();
   }
@@ -265,11 +272,11 @@ onMounted(() => {
   ensureBaseFavicon();
   loadClientChoice();
   connect();
-  window.addEventListener('keydown', handleKeyPress);
+  window.addEventListener("keydown", handleKeyPress);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleKeyPress);
+  window.removeEventListener("keydown", handleKeyPress);
   if (pingInterval) clearInterval(pingInterval);
   stopRinging();
   if (socket) {
@@ -336,7 +343,7 @@ onBeforeUnmount(() => {
 
     <!-- Footer: Version and Author -->
     <div class="footer">
-      <span class="version">v0.1</span>
+      <span class="version">{{ appVersion }}</span>
       <a href="https://github.com/rouvenschandl" target="_blank" class="author"
         >Rouven Schandl</a
       >

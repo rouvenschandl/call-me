@@ -37,13 +37,13 @@ Then open http://your-ip:3000 in two different browsers/tabs and select Client A
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Run dev server (client)
-pnpm dev
+bun run dev
 
 # Run server (in another terminal)
-pnpm dev:server
+bun run dev:server
 ```
 
 Open http://localhost:5173
@@ -52,10 +52,23 @@ Open http://localhost:5173
 
 ```bash
 # Build client and server
-pnpm build
+bun run build
 
 # Start production server
-pnpm start
+bun run start
+```
+
+## ✅ Code Quality
+
+```bash
+# Lint
+bun run lint
+
+# Format
+bun run format
+
+# Full check
+bun run check
 ```
 
 ## 🐳 Docker

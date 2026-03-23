@@ -1,29 +1,28 @@
 # Build stage
-FROM node:24-alpine AS builder
+FROM oven/bun:1.3.11-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 COPY . .
-RUN pnpm run build && \
-    npx tsc server.ts --outDir dist-server --module ESNext --moduleResolution bundler --target ES2020 --esModuleInterop
+RUN bun run build && \
+    bunx tsc server.ts --outDir dist-server --module ESNext --moduleResolution bundler --target ES2020 --esModuleInterop
 
 # Server stage
-FROM node:24-alpine
+FROM oven/bun:1.3.11-alpine
 
 WORKDIR /app
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/dist-server/server.js ./server.js
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/bun.lock ./bun.lock
 
-RUN npm install -g pnpm && \
-    pnpm install --prod
+RUN bun install --frozen-lockfile --production
 
 EXPOSE 3000
 ENV NODE_ENV=production
 
-CMD ["node", "server.js"]
+CMD ["bun", "server.js"]
