@@ -19,7 +19,7 @@ updates:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
     # Target branch for pull requests
-    target-branch: develop
+    target-branch: main
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: github-actions
@@ -31,7 +31,7 @@ updates:
     # Limit the number of open pull requests for version updates to 1
     open-pull-requests-limit: 1
     # Target branch for pull requests
-    target-branch: develop
+    target-branch: main
 
   # Enable base image updates for Docker
   - package-ecosystem: docker
@@ -43,4 +43,4 @@ updates:
     # Limit the number of open pull requests for version updates to 1
     open-pull-requests-limit: 1
     # Target branch for pull requests
-    target-branch: develop
+    target-branch: main
