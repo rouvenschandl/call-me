@@ -17,6 +17,7 @@ const originalTitle = ref("");
 let socket: Socket;
 let blinkInterval: ReturnType<typeof setInterval> | null = null;
 let pingInterval: ReturnType<typeof setInterval> | null = null;
+let timeoutInterval: ReturnType<typeof setInterval> | null = null;
 
 type RegistrationResult = {
   success: boolean;
@@ -76,17 +77,17 @@ const measurePing = () => {
 };
 
 const connect = () => {
-  // Use current origin for connection (works in dev and production)
-  // This allows connection from any device in the network
-  const socketUrl =
-    import.meta.env.DEV && import.meta.env.VITE_SERVER_URL
-      ? import.meta.env.VITE_SERVER_URL
-      : window.location.origin.replace(/:\d+$/, ":3000"); // Use current host but port 3000
+  // Use environment URL if available, otherwise use current origin
+  // Supports HTTPS, reverse proxies, Docker setups, and different ports
+  const socketUrl = import.meta.env.VITE_SERVER_URL || window.location.origin;
 
   console.log("🔌 Connecting to:", socketUrl);
 
   socket = io(socketUrl, {
     transports: ["websocket", "polling"],
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
   });
 
   socket.on("connect", () => {
@@ -110,9 +111,11 @@ const connect = () => {
       registered.value = false;
       registrationError.value = data.message || "Registration failed";
       console.error("✗ Registration failed:", data.message);
-      // Try to reconnect if registration failed
+      // Retry registration only if socket is still connected
       setTimeout(() => {
-        socket.emit("register", clientName.value);
+        if (socket.connected) {
+          socket.emit("register", clientName.value);
+        }
       }, 1000);
     }
   });
@@ -138,10 +141,16 @@ const ringBell = () => {
     isCallTimeout.value = true;
     timeoutCounter.value = 5;
 
-    const interval = setInterval(() => {
+    // Clear any existing timeout interval to prevent race conditions
+    if (timeoutInterval) {
+      clearInterval(timeoutInterval);
+    }
+
+    timeoutInterval = setInterval(() => {
       timeoutCounter.value--;
       if (timeoutCounter.value <= 0) {
-        clearInterval(interval);
+        clearInterval(timeoutInterval);
+        timeoutInterval = null;
         isCallTimeout.value = false;
         timeoutCounter.value = 5;
       }
@@ -241,6 +250,9 @@ const stopRinging = () => {
 };
 
 const triggerRing = () => {
+  // Prevent race condition: ignore if already ringing
+  if (isRinging.value) return;
+
   stopRinging();
   ensureBaseFavicon();
 
@@ -281,6 +293,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", handleKeyPress);
   if (pingInterval) clearInterval(pingInterval);
+  if (timeoutInterval) clearInterval(timeoutInterval);
   stopRinging();
   if (socket) {
     socket.disconnect();
