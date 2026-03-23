@@ -15,9 +15,9 @@ const originalFaviconHref = ref<string | null>(null);
 const hadOriginalFavicon = ref(false);
 const originalTitle = ref("");
 let socket: Socket;
-let blinkInterval: ReturnType<typeof setInterval> | null = null;
-let pingInterval: ReturnType<typeof setInterval> | null = null;
-let timeoutInterval: ReturnType<typeof setInterval> | null = null;
+let blinkInterval: ReturnType<typeof setInterval> | undefined;
+let pingInterval: ReturnType<typeof setInterval> | undefined;
+let timeoutInterval: ReturnType<typeof setInterval> | undefined;
 
 type RegistrationResult = {
   success: boolean;
@@ -150,7 +150,7 @@ const ringBell = () => {
       timeoutCounter.value--;
       if (timeoutCounter.value <= 0) {
         clearInterval(timeoutInterval);
-        timeoutInterval = null;
+        timeoutInterval = undefined;
         isCallTimeout.value = false;
         timeoutCounter.value = 5;
       }
@@ -242,7 +242,7 @@ const ensureBaseFavicon = () => {
 const stopRinging = () => {
   if (blinkInterval) {
     clearInterval(blinkInterval);
-    blinkInterval = null;
+    blinkInterval = undefined;
   }
   isRinging.value = false;
   restoreOriginalFavicon();
