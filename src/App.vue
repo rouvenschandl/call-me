@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type Socket, io } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import packageJson from "../package.json";
 
@@ -23,9 +23,11 @@ type RegistrationResult = {
   message?: string;
 };
 
+// biome-ignore lint/correctness/noUnusedVariables: used in Vue template bindings
 const containerClass = computed(() => ({
   ringing: isRinging.value,
 }));
+// biome-ignore lint/correctness/noUnusedVariables: used in Vue template bindings
 const appVersion = packageJson.version;
 
 // Save client selection to localStorage
@@ -42,6 +44,7 @@ const loadClientChoice = () => {
 };
 
 // Watch for client name changes and reconnect
+// biome-ignore lint/correctness/noUnusedVariables: used in Vue template bindings
 const changeClient = (newName: "clientA" | "clientB") => {
   if (newName !== clientName.value && isConnected.value) {
     // Disconnect from old client
